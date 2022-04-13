@@ -10,59 +10,81 @@ import random
 class AI:
     def __init__(self, guessPool, numPools):
         self.guessPools = []
+        self.guessPools.append(guessPool)
+        self.poolToChooseFrom = self.guessPools[0]
         # make the desired number of word pools.
-        i = 0
+        i = 1
         while i < numPools:
-            self.guessPools.append(guessPool)
+            temp = guessPool.copy() # need to make copies or python messes up
+            self.guessPools.append(temp)
             i += 1
 
     # function that will pick word, overridden by each child class.
     def pickWord(self):
-        return random.choice(self.guessPools[0])
+        self.pickPool() # function that determines what pool of the AI's we
+                        # should pick a word from.
+        ret = random.choice(self.poolToChooseFrom)
+        self.poolToChooseFrom.remove(ret) # remove choice once done.
+        return ret
+
+    # function that picks the pool we should be taking a word from. generally,
+    # i think it should be the pool with the largest number of possible words
+    # left, because we have the highest potential info gain that way.
+    def pickPool(self):
+        mostWordsLeft = 0
+        i = 0
+        for pool in self.guessPools:
+            length = len(self.guessPools[i])
+            if length == 1: # if only one possible word
+                self.poolToChooseFrom = self.guessPools[i]
+                break # immediately choose this word, because we need to
+                      # eventually and we can get info from it.
+            elif length > mostWordsLeft:
+                self.poolToChooseFrom = self.guessPools[i] # assigns pool with
+                                                           # words left 
+                mostWordsLeft = length
+            i += 1
 
     # function that uses the hints provided by the game to eliminate
     # words from the pools. all children can use this function because
     # they will all work this way.
-    def interpretHint(self, hint, guess):
-        gpCount = 0
-        for guessPool in self.guessPools:
+    def interpretHint(self, hint, guess, guessPool):
             count = 0;
             for letter in hint:
                 if letter == "G":
-                    self.greenLetter(guess[count], count, gpCount)
+                    self.greenLetter(guess[count], count, guessPool)
                 elif letter == "Y":
-                    self.yellowLetter(guess[count], count, gpCount)
+                    self.yellowLetter(guess[count], count, guessPool)
                 elif letter == "B":
-                    self.blackLetter(guess[count], gpCount)
+                    self.blackLetter(guess[count], guessPool)
                 count += 1
-            gpCount += 1
 
     # function that eliminates words from the pools that do not have
     # the green letter in the same spot.
     def greenLetter(self, letter, spot, guessPool):
-        for word in range(len(self.guessPools[guessPool]) - 1, -1, -1):
-            ex = self.guessPools[guessPool][word]
+        for word in range(len(guessPool) - 1, -1, -1):
+            ex = guessPool[word]
             if ex[spot] != letter:
-                self.guessPools[guessPool].remove(ex)
+                guessPool.remove(ex)
 
     # function that eliminates words from the pools that do not abide
     # by the yellow rule (in word but different spot).
     def yellowLetter(self, letter, spot, guessPool):
-        for word in range(len(self.guessPools[guessPool]) - 1, -1, -1):
-            ex = self.guessPools[guessPool][word]
+        for word in range(len(guessPool) - 1, -1, -1):
+            ex = guessPool[word]
             if letter not in ex:
-                self.guessPools[guessPool].remove(ex)
+                guessPool.remove(ex)
             if ex[spot] == letter:
-                self.guessPools[guessPool].remove(ex)
+                guessPool.remove(ex)
 
 
     # function that eliminates words from the pools that have an instance
     # of a black letter.
     def blackLetter(self, letter, guessPool):
-        for word in range(len(self.guessPools[guessPool]) - 1, -1, -1):
-            ex = self.guessPools[guessPool][word]
+        for word in range(len(guessPool) - 1, -1, -1):
+            ex = guessPool[word]
             if letter in ex:
-                self.guessPools[guessPool].remove(ex)
+                guessPool.remove(ex)
 
     # def priority(self, ele):
     #     return len(list(set(ele)))
@@ -76,20 +98,27 @@ class UniqueWords(AI):
 
     def __init__(self, guessPool, numPools):
         self.guessPools = []
-        i = 0
+        self.guessPools.append(guessPool)
+        self.guessPools[0].sort(key=self.priority, reverse=True)
+
+        i = 1
         while i < numPools:
-            self.guessPools.append(guessPool)
-            self.guessPools[i].sort(key=self.priority, reverse=True)
+            temp = self.guessPools[0].copy()
+            self.guessPools.append(temp)
             i += 1
 
     def pickWord(self):
+        self.pickPool()
+
         viableWords = []
-        threshHold = self.priority(self.guessPools[0][0])
-        for word in self.guessPools[0]:
+        threshHold = self.priority(self.poolToChooseFrom[0])
+        for word in self.poolToChooseFrom:
             if self.priority(word) < threshHold:
                 break
             viableWords.append(word)
-        return random.choice(viableWords)
+        ret = random.choice(viableWords)
+        self.poolToChooseFrom.remove(ret)
+        return ret
 
 
     def uniqueLetters(self, word):
@@ -108,14 +137,20 @@ class UniqueWords(AI):
 class Scrabble(AI):
     def __init__(self, guessPool, numPools):
         self.guessPools = []
-        i = 0;
+        self.guessPools.append(guessPool)
+        self.guessPools[0].sort(key=self.ScrabbleWord, reverse=True)
+
+        i = 1
         while i < numPools:
-            self.guessPools.append(guessPool)
-            self.guessPools[i].sort(key=self.ScrabbleWord, reverse=True)
+            temp = self.guessPools[0].copy()
+            self.guessPools.append(temp)
             i += 1
 
     def pickWord(self):
-        return self.guessPools[0][0]
+        self.pickPool()
+        ret = self.poolToChooseFrom[0]
+        self.poolToChooseFrom.remove(ret)
+        return ret
 
     def ScrabbleWord(self, word):
         count = 0
@@ -138,14 +173,20 @@ class Scrabble(AI):
 class CommonLetters(AI):
     def __init__(self, guessPool, numPools):
         self.guessPools = []
-        i = 0;
+        self.guessPools.append(guessPool)
+        self.guessPools[0].sort(key=self.CommonWord, reverse=True)
+
+        i = 1
         while i < numPools:
-            self.guessPools.append(guessPool)
-            self.guessPools[i].sort(key=self.CommonWord, reverse=True)
+            temp = self.guessPools[0].copy()
+            self.guessPools.append(temp)
             i += 1
 
     def pickWord(self):
-        return self.guessPools[0][0]
+        self.pickPool()
+        ret = self.poolToChooseFrom[0]
+        self.poolToChooseFrom.remove(ret)
+        return ret
 
     def CommonWord(self, word):
         count = 0
@@ -167,14 +208,20 @@ class CommonLetters(AI):
 class CommonLetterSpots(AI):
     def __init__(self, guessPool, numPools):
         self.guessPools = []
-        i = 0;
+        self.guessPools.append(guessPool)
+        self.guessPools[0].sort(key=self.CommonLetterSpot, reverse=True)
+
+        i = 1
         while i < numPools:
-            self.guessPools.append(guessPool)
-            self.guessPools[i].sort(key=self.CommonLetterSpot, reverse=True)
+            temp = self.guessPools[0].copy()
+            self.guessPools.append(temp)
             i += 1
 
     def pickWord(self):
-        return self.guessPools[0][0]
+        self.pickPool()
+        ret = self.poolToChooseFrom[0]
+        self.poolToChooseFrom.remove(ret)
+        return ret
 
     def CommonLetterSpot(self, word):
         count = 0

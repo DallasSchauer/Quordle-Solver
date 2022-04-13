@@ -13,6 +13,7 @@ NUM_GUESSES = 10657 # the number of valid guesses (lines in valid_guesses.txt)
 class Quordle:
     def __init__(self, answers, numWords):
         self.answers = [] # list of hidden words
+        self.numWords = numWords
 
         # randomly choose numWords number of hidden words
         i = 0
@@ -34,6 +35,7 @@ class Quordle:
     # 4 different hidden words)
     def evaluateGuess(self, guess):
         hints = [] # list of hints to be returned.
+
         for answer in self.answers:
             hint = ''
             count = 0
@@ -64,15 +66,12 @@ def main():
     with open('data/valid_guesses.txt') as guessesText:
         guesses = guessesText.readlines()
 
-    alphabet = "abcdefghijklmnopqrstuvwxyz"
-    # for letter in alphabet:
-    #     print("% of ", letter, ": ", PercentageOfWords(answers, letter))
-
-
-    # Run tests on desired AI. Change first arg for number of games, and
-    # change last arg for the AI you want to test.
-    res = PlayManyGames(200, answers, 1, AI.CommonLetterSpots)
-    print("\nAVERAGE NUM OF GAMES: ", res[0], "\nWIN PERCENTAGE (<= 6 GUESSES): ",
+    # Run tests on desired AI.
+    # Change first arg for number of games
+    # Change third arg for number of words in game (1 for wordle, 4 for quordle, etc)
+    # Change last arg for the AI you want to test.
+    res = PlayManyGames(100, answers, 4, AI.CommonLetterSpots)
+    print("\nAVERAGE NUM OF GUESSES: ", res[0], "\nWIN PERCENTAGE: ",
     res[1], "\nWORST GAME: ", res[2], "\nBEST GAME: ", res[3])
 
 
@@ -94,23 +93,30 @@ def PlayAGame(answers, numWords, ai):
     myAI = ai(answers, numWords); # make new AI
 
     numGuesses = 0
+    numCorrect = 0
 
-    print("\nHIDDEN WORD IS: ", game.answers[0]) # one word for now
-    while True:
+    print("\nHIDDEN WORDS ARE: ", game.answers)
+    while numCorrect < numWords:
         word = myAI.pickWord() # AI picks a word
         numGuesses += 1
-        print("PICKED WORD: ", word, " out of ", len(myAI.guessPools[0]), " words")
+        print("PICKED WORD: ", word, " out of ", len(myAI.poolToChooseFrom)+1, " words")
 
-        if word == game.answers[0]: # exit if its correct (change for >1 word)
-            break
+        if word in game.answers: # exit if its correct (change for >1 word)
+            numCorrect += 1
+
 
         hint = game.evaluateGuess(word[:5]) # evaluate latest guess
-        myAI.interpretHint(hint[0], word[:5]) # narrow down AI's guess pools
+        print(game.answers)
+        print(hint)
+        interpretationsCount = 0
+        while interpretationsCount < numWords:
+            myAI.interpretHint(hint[interpretationsCount], word[:5],
+            myAI.guessPools[interpretationsCount]) # narrow down AI's guess pools
+            print(interpretationsCount, ": ", len(myAI.guessPools[interpretationsCount]))
+            interpretationsCount += 1
         # print("NUMBER OF WORDS LEFT: ", len(myAI.guessPools[0]))
         # print("WORDS LEFT: ", myAI.guessPools[0])
-
-
-    print("GOT WORD: ", word, " IN ", numGuesses)
+    print("GOT ALL WORDS IN :", numGuesses, " GUESSES.")
     return numGuesses
 
 
@@ -130,6 +136,7 @@ def PlayManyGames(numGames, answers, numWords, ai):
     wins = 0 # number of times the AI guessed it in less than 6 (change for >1 word)
     best = 99 # best case, number should only go down
     worst = 0 # worst case, number should only go up
+    goal = numWords + 5
 
     j = 0
     while j < numGames:
@@ -140,7 +147,7 @@ def PlayManyGames(numGames, answers, numWords, ai):
             worst = temp
         if temp < best: # updates best if necessary.
             best = temp
-        if temp <= 6: # adds a W if the AI won in time.
+        if temp <= goal: # adds a W if the AI won in time.
             wins += 1
         count += temp # update total number of guesses to calc avg later
         j += 1
@@ -149,6 +156,9 @@ def PlayManyGames(numGames, answers, numWords, ai):
     winPct = wins / numGames # find win percentage
     return (avg, winPct, worst, best)
 
+# FUNCTION: PERCENTAGEOFWORDS
+# funcction i used to calculate the percentage of 5-letter words each letter
+# is in.
 def PercentageOfWords(words, letter):
     count = 0
     for word in words:
@@ -156,6 +166,9 @@ def PercentageOfWords(words, letter):
             count += 1
     return count / NUM_ANSWERS
 
+# FUNCITON: PercentageOfLetters
+# function i used to calculate the percentage of spots in the words with the certain
+# letters are.
 def PercentageOfLetters(words, letter, spot):
     count = 0
     for word in words:
