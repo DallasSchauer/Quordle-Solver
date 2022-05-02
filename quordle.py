@@ -70,10 +70,9 @@ def main():
     # Change first arg for number of games
     # Change third arg for number of words in game (1 for wordle, 4 for quordle, etc)
     # Change last arg for the AI you want to test.
-    res = PlayManyGames(100, answers, 4, AI.CommonLetterSpots)
+    res = PlayManyGames(100, answers, 4, AI.Entropy)
     print("\nAVERAGE NUM OF GUESSES: ", res[0], "\nWIN PERCENTAGE: ",
     res[1], "\nWORST GAME: ", res[2], "\nBEST GAME: ", res[3])
-
 
     # Report length of program
     toc = time.time()
@@ -91,9 +90,10 @@ def main():
 def PlayAGame(answers, numWords, ai):
     game = Quordle(answers, numWords) # make new game
     myAI = ai(answers, numWords); # make new AI
-
+    allGuesses = []
     numGuesses = 0
     numCorrect = 0
+    print("--------------------------")
 
     print("\nHIDDEN WORDS ARE: ", game.answers)
     while numCorrect < numWords:
@@ -103,6 +103,9 @@ def PlayAGame(answers, numWords, ai):
 
         if word in game.answers: # exit if its correct (change for >1 word)
             numCorrect += 1
+            allGuesses.append(word.upper())
+        else:
+            allGuesses.append(word)
 
 
         hint = game.evaluateGuess(word[:5]) # evaluate latest guess
@@ -114,9 +117,9 @@ def PlayAGame(answers, numWords, ai):
             myAI.guessPools[interpretationsCount]) # narrow down AI's guess pools
             print(interpretationsCount, ": ", len(myAI.guessPools[interpretationsCount]))
             interpretationsCount += 1
-        # print("NUMBER OF WORDS LEFT: ", len(myAI.guessPools[0]))
-        # print("WORDS LEFT: ", myAI.guessPools[0])
+    print ("ALL GUESSES: ", allGuesses)
     print("GOT ALL WORDS IN :", numGuesses, " GUESSES.")
+    print("--------------------------")
     return numGuesses
 
 
@@ -151,6 +154,7 @@ def PlayManyGames(numGames, answers, numWords, ai):
             wins += 1
         count += temp # update total number of guesses to calc avg later
         j += 1
+        print("FINISHED GAME NUMBER: ", j)
 
     avg = count / numGames # find average
     winPct = wins / numGames # find win percentage
